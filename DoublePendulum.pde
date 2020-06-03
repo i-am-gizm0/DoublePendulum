@@ -1,9 +1,7 @@
 // Physics Values
 float theta1 = 0;
-float lastTheta1 = 0;
 float deltaTheta1 = 0;
 float omega1 = 0;
-float lastOmega1 = 0;
 float deltaOmega1 = 0;
 float alpha1 = 0;
 
@@ -17,10 +15,8 @@ float ay1 = 0;
 
 
 float theta2 = 0;
-float lastTheta2 = 0;
 float deltaTheta2 = 0;
 float omega2 = 0;
-float lastOmega2 = 0;
 float deltaOmega2 = 0;
 float alpha2 = 0;
 
@@ -32,7 +28,9 @@ float y2 = 0;
 float vy2 = 0;
 float ay2 = 0;
 
-// Physics Constants (for now)
+// Physics "Constants" (for now)
+final float g = Constants.g;
+
 final float l1 = Constants.length1;
 final float m1 = Constants.mass1;
 
@@ -41,49 +39,65 @@ final float m2 = Constants.mass2;
 
 
 // Time
+int now;
 int lastMillis = 0;
 int deltaMillis = 0;
 
 // Debug Text
 int textLine = 1;
 int textMaxLength = 0;
-int textShift = 6;
+int textShift = 7;
+
+boolean help = true;
+boolean debug = true;
 
 PFont font;
 
 void setup() {
   size(720, 720);
-  background(0);
   
   font = loadFont("Consolas-12.vlw");
   textFont(font, 12);
 }
 
 void draw() {
-  int now = millis();
+  now = millis();
   deltaMillis = now - lastMillis;
   float deltaSec = deltaMillis / 1000.0;
+  
   translate(width / 2, height / 2);  // Moves the origin to the center of the window
   scale(1, -1);  // Inverts the Y axis so it points up like we're used to. It hopefully will make math easier later
   background(0);
   textLine = 1;
   textMaxLength = 0;
-  textShift = 6;
+  textShift = 7;
   
   // Calculate *physics*
   // Calculate rotational kinematics of first pendulum
-  deltaTheta1 = theta1 - lastTheta1;
-  omega1 = deltaTheta1 / deltaSec;
+  float num1 = -g * (2 * m1 + m2) * sin(theta1) - m2 * g * sin(theta1 - 2 * theta2) - 2 * sin(theta1 - theta2) * m2 * (pow(omega2, 2) * l2 + pow(omega1, 2) * l1 * cos(theta1 - theta2));
+  float den1 = l1 * (2 * m1 + m2 - m2 * cos(2 * theta1 - 2 * theta2));
+  alpha1 = num1 / den1;
   
-  deltaOmega1 = omega1 - lastOmega1;
-  alpha1 = deltaOmega1 / deltaSec;
+  // It's relatively safe to assume the amount of time between frames is consistent from one to the next.
+  // It fluctuates ~2ms but that doesn't really matter and it averages out to 60fps.
+  
+  deltaOmega1 = alpha1 * deltaSec;
+  omega1 += deltaOmega1;
+  
+  deltaTheta1 = omega1 * deltaSec;
+  theta1 += deltaTheta1;
   
   // Calculate rotational kinematics of second pendulum
-  deltaTheta2 = theta2 - lastTheta2;
-  omega2 = deltaTheta2 / deltaSec;
   
-  deltaOmega2 = omega2 - lastOmega2;
-  alpha2 = deltaOmega2 / deltaSec;
+  float num2 = 2 * sin(theta1 - theta2) * (pow(omega1, 2) * l1 * (m1 + m2) + g * (m1 + m2) * cos(theta1) + pow(omega2, 2) * l2 * m2 * cos(theta1 - theta2));
+  float den2 = l2 * (2 * m1 + m2 - m2 * cos(2 * theta1 - 2 * theta2));
+  alpha2 = num2 / den2;
+  
+  deltaOmega2 = alpha2 * deltaSec;
+  omega2 += deltaOmega2;
+  
+  deltaTheta2 = omega2 * deltaSec;
+  theta2 += deltaTheta2;
   
   
   // Calculate linear kinematics of first pendulum
@@ -127,20 +141,15 @@ void draw() {
   stroke(0, 0, 255);
   point(drawScale(x2), drawScale(y2));
   
-  // Draw debug
-  // [TODO] add toggle (d?)
-  scale(1, -1);
-  translate(-width / 2, -height / 2);
-  debug();
+  if (debug) {
+    // Draw debug
+    scale(1, -1);
+    translate(-width / 2, -height / 2);
+    debug();
+  }
   
   // Cleanup for the next frame
   lastMillis = now;
-  
-  lastTheta1 = theta1;
-  lastOmega1 = omega1;
-  
-  lastTheta2 = theta2;
-  lastOmega2 = omega2;
 }
 
 private float drawScale(float n) {
@@ -148,8 +157,12 @@ private float drawScale(float n) {
 }
 
 private void debug() {
+  fill(64);
+  textDraw("Press [D] to toggle this menu");
+  textDraw();
+  
   fill(255);
-  textDraw("Gravity: " + Constants.g + "m/s");
+  textDraw("Gravity: " + g + "m/s");
   textDraw("Mass Scale Factor: " + Constants.massScaleFactor);
   textDraw("Length Scale Factor: " + Constants.lengthScaleFactor);
   textDraw();
@@ -157,18 +170,20 @@ private void debug() {
   fill(128, 255, 128);
   textDraw("W: " + width + "px");
   textDraw("H: " + height + "px");
+  textDraw("S: " + (Constants.viewScale * 100) + "%");
   fill(0, 255, 0);
   textDraw("Frame Rate: " + String.format("%1$-" + 9 + "s", frameRate) + "fps");
   textDraw("Rendered Frames: " + frameCount + "frames");
-  textDraw("Elapsed Time: " + millis() + "ms");
+  textDraw("Elapsed Time: " + now + "ms");
   textDraw("Last Time: " + lastMillis + "ms");
   textDraw("Interframe Time: " + deltaMillis + "ms");
+  textDraw("Calculation Time: " + (millis() - now) + "ms");
   nextColumn();
   
   fill(255, 128, 128);
   textDraw("L₁  " + l1 + "m");
   textDraw("M₁  " + m1 + "kg");
-  textDraw();
+  textDraw("                      ");
   fill(255, 0, 0);
   textDraw("θ₁  " + theta1 + "rad");
   textDraw("Δθ₁ " + deltaTheta1 + "rad");
@@ -221,6 +236,14 @@ private void textDraw(String text) {
 
 private void nextColumn() {
   textLine = 1;
-  textShift = (textMaxLength * 6) + 32 + textShift;
+  textShift = (textMaxLength * 7) + 7 + textShift;
   textMaxLength = 0;
+}
+
+void keyPressed() {
+  switch (key) {
+    case 'd':
+      debug = !debug;
+      break;
+  }
 }
