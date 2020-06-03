@@ -1,3 +1,7 @@
+// Double Pendulum
+// https://github.com/i-am-gizm0/DoublePendulum
+// Equations from https://www.myphysicslab.com/pendulum/double-pendulum-en.html
+
 // Physics Values
 float theta1 = 0;
 float deltaTheta1 = 0;
@@ -14,7 +18,7 @@ float vy1 = 0;
 float ay1 = 0;
 
 
-float theta2 = 0;
+float theta2 = PI;
 float deltaTheta2 = 0;
 float omega2 = 0;
 float deltaOmega2 = 0;
@@ -50,14 +54,16 @@ int textShift = 7;
 
 boolean help = true;
 boolean debug = true;
+boolean paused = false;
 
 PFont font;
+PFont Sen;
 
 void setup() {
   size(720, 720);
   
   font = loadFont("Consolas-12.vlw");
-  textFont(font, 12);
+  Sen = loadFont("Sen-36.vlw");
 }
 
 void draw() {
@@ -65,58 +71,68 @@ void draw() {
   deltaMillis = now - lastMillis;
   float deltaSec = deltaMillis / 1000.0;
   
+  background(0);
+  
+  fill(64);
+  textFont(Sen, 36);
+  textAlign(LEFT, BOTTOM);
+  text("Double Pendulum", 24, height - 24);
+  textFont(Sen, 18);
+  text("github.com/i-am-gizm0", 24, height - 60);
+  
   translate(width / 2, height / 2);  // Moves the origin to the center of the window
   scale(1, -1);  // Inverts the Y axis so it points up like we're used to. It hopefully will make math easier later
-  background(0);
   textLine = 1;
   textMaxLength = 0;
   textShift = 7;
   
-  // Calculate *physics*
-  // Calculate rotational kinematics of first pendulum
-  float num1 = -g * (2 * m1 + m2) * sin(theta1) - m2 * g * sin(theta1 - 2 * theta2) - 2 * sin(theta1 - theta2) * m2 * (pow(omega2, 2) * l2 + pow(omega1, 2) * l1 * cos(theta1 - theta2));
-  float den1 = l1 * (2 * m1 + m2 - m2 * cos(2 * theta1 - 2 * theta2));
-  alpha1 = num1 / den1;
-  
-  // It's relatively safe to assume the amount of time between frames is consistent from one to the next.
-  // It fluctuates ~2ms but that doesn't really matter and it averages out to 60fps.
-  
-  deltaOmega1 = alpha1 * deltaSec;
-  omega1 += deltaOmega1;
-  
-  deltaTheta1 = omega1 * deltaSec;
-  theta1 += deltaTheta1;
-  
-  // Calculate rotational kinematics of second pendulum
-  
-  float num2 = 2 * sin(theta1 - theta2) * (pow(omega1, 2) * l1 * (m1 + m2) + g * (m1 + m2) * cos(theta1) + pow(omega2, 2) * l2 * m2 * cos(theta1 - theta2));
-  float den2 = l2 * (2 * m1 + m2 - m2 * cos(2 * theta1 - 2 * theta2));
-  alpha2 = num2 / den2;
-  
-  deltaOmega2 = alpha2 * deltaSec;
-  omega2 += deltaOmega2;
-  
-  deltaTheta2 = omega2 * deltaSec;
-  theta2 += deltaTheta2;
-  
-  
-  // Calculate linear kinematics of first pendulum
-  x1 = l1 * sin(theta1);
-  vx1 = omega1 * l1 * cos(theta1);
-  ax1 = -pow(omega1, 2) * l1 * sin(theta1) + alpha1 * l1 * cos(theta1);
-  
-  y1 = -1 * l1 * cos(theta1);
-  vy1 = omega1 * l1 * sin(theta1);
-  ay1 = pow(omega1, 2) * l1 * cos(theta1) + alpha1 * l1 * sin(theta1);
-  
-  // Calculate linear kinematics of second pendulum
-  x2 = x1 + l2 * sin(theta2);
-  vx2 = vx1 + omega2 * l2 * cos(theta2);
-  ax2 = ax1 - pow(omega2, 2) * l2 * sin(theta2) + alpha2 * l2 * cos(theta2); 
-  
-  y2 = y1 - l2 * cos(theta2);
-  vy2 = vy1 + omega2 * l2 * sin(theta2);
-  ay2 = ay1 + pow(omega2, 2) * l2 * cos(theta2) + alpha2 * l2 * sin(theta2);
+  if (!paused) {
+    // Calculate *physics*
+    // Calculate rotational kinematics of first pendulum
+    float num1 = -g * (2 * m1 + m2) * sin(theta1) - m2 * g * sin(theta1 - 2 * theta2) - 2 * sin(theta1 - theta2) * m2 * (pow(omega2, 2) * l2 + pow(omega1, 2) * l1 * cos(theta1 - theta2));
+    float den1 = l1 * (2 * m1 + m2 - m2 * cos(2 * theta1 - 2 * theta2));
+    alpha1 = num1 / den1;
+    
+    // It's relatively safe to assume the amount of time between frames is consistent from one to the next.
+    // It fluctuates ~2ms but that doesn't really matter and it averages out to 60fps.
+    
+    deltaOmega1 = alpha1 * deltaSec;
+    omega1 += deltaOmega1;
+    
+    deltaTheta1 = omega1 * deltaSec;
+    theta1 += deltaTheta1;
+    
+    // Calculate rotational kinematics of second pendulum
+    
+    float num2 = 2 * sin(theta1 - theta2) * (pow(omega1, 2) * l1 * (m1 + m2) + g * (m1 + m2) * cos(theta1) + pow(omega2, 2) * l2 * m2 * cos(theta1 - theta2));
+    float den2 = l2 * (2 * m1 + m2 - m2 * cos(2 * theta1 - 2 * theta2));
+    alpha2 = num2 / den2;
+    
+    deltaOmega2 = alpha2 * deltaSec;
+    omega2 += deltaOmega2;
+    
+    deltaTheta2 = omega2 * deltaSec;
+    theta2 += deltaTheta2;
+    
+    
+    // Calculate linear kinematics of first pendulum
+    x1 = l1 * sin(theta1);
+    vx1 = omega1 * l1 * cos(theta1);
+    ax1 = -pow(omega1, 2) * l1 * sin(theta1) + alpha1 * l1 * cos(theta1);
+    
+    y1 = -1 * l1 * cos(theta1);
+    vy1 = omega1 * l1 * sin(theta1);
+    ay1 = pow(omega1, 2) * l1 * cos(theta1) + alpha1 * l1 * sin(theta1);
+    
+    // Calculate linear kinematics of second pendulum
+    x2 = x1 + l2 * sin(theta2);
+    vx2 = vx1 + omega2 * l2 * cos(theta2);
+    ax2 = ax1 - pow(omega2, 2) * l2 * sin(theta2) + alpha2 * l2 * cos(theta2); 
+    
+    y2 = y1 - l2 * cos(theta2);
+    vy2 = vy1 + omega2 * l2 * sin(theta2);
+    ay2 = ay1 + pow(omega2, 2) * l2 * cos(theta2) + alpha2 * l2 * sin(theta2);
+  }
   
   // The hard part's over. Draw it.
   strokeWeight(2);
@@ -141,10 +157,22 @@ void draw() {
   stroke(0, 0, 255);
   point(drawScale(x2), drawScale(y2));
   
+  scale(1, -1);
+  translate(-width / 2, -height / 2);
+  
+  textFont(font, 12);
+  if (paused) {
+    fill(255);
+    textDraw("PAUSED");
+    textDraw();
+  }
+  
+  if (help) {
+    help();
+  }
+  
   if (debug) {
     // Draw debug
-    scale(1, -1);
-    translate(-width / 2, -height / 2);
     debug();
   }
   
@@ -156,11 +184,17 @@ private float drawScale(float n) {
   return n * Constants.lengthScaleFactor;
 }
 
-private void debug() {
+private void help() {
   fill(64);
-  textDraw("Press [D] to toggle this menu");
-  textDraw();
-  
+  textDraw("Keyboard Shortcuts");
+  textDraw(" Key   Function");
+  textDraw("  ?    Help menu");
+  textDraw("  d    Debug List");
+  textDraw("space  Pause/Resume");
+  nextColumn();
+}
+
+private void debug() {
   fill(255);
   textDraw("Gravity: " + g + "m/s");
   textDraw("Mass Scale Factor: " + Constants.massScaleFactor);
@@ -241,9 +275,23 @@ private void nextColumn() {
 }
 
 void keyPressed() {
-  switch (key) {
-    case 'd':
-      debug = !debug;
-      break;
+  if (key != CODED) {
+    switch (key) {
+      case 'd':
+        debug = !debug;
+        break;
+        
+       case '?':
+       case '/':
+         help = !help;
+         break;
+       
+       case ' ':
+         paused = !paused;
+         break;
+    }
+  } else {
+    switch (keyCode) {
+    }
   }
 }
