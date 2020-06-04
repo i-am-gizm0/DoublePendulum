@@ -1,7 +1,7 @@
-public class Pair {
+public class Pair<T> {
   T a;
   T b;
-  void Pair<T, T>(T a, T b) {
+  public Pair(T a, T b) {
     this.a = a;
     this.b = b;
   }
@@ -20,5 +20,9 @@ public class Pair {
   
   void setB(T b) {
     this.b = b;
+  }
+  
+  String toString() {
+    return "(" + a + ", " + b + ")";
   }
 }

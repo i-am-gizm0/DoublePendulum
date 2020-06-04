@@ -17,8 +17,9 @@ float y1 = 0;
 float vy1 = 0;
 float ay1 = 0;
 
+ArrayList pos1 = new ArrayList<Pair<Float>>();
 
-float theta2 = PI;
+float theta2 = 0;
 float deltaTheta2 = 0;
 float omega2 = 0;
 float deltaOmega2 = 0;
@@ -32,6 +33,8 @@ float y2 = 0;
 float vy2 = 0;
 float ay2 = 0;
 
+ArrayList pos2 = new ArrayList<Pair<Float>>();
+
 // Physics "Constants" (for now)
 final float g = Constants.g;
 
@@ -41,47 +44,67 @@ final float m1 = Constants.mass1;
 final float l2 = Constants.length2;
 final float m2 = Constants.mass2;
 
+float viewScale = Constants.viewScale;
+
 
 // Time
 int now;
 int lastMillis = 0;
 int deltaMillis = 0;
+long frameRateSum = 0;
 
 // Debug Text
 int textLine = 1;
 int textMaxLength = 0;
 int textShift = 7;
 
-boolean help = true;
+boolean help = false;
 boolean debug = true;
 boolean paused = false;
+boolean saveFrame = false;
 
 PFont font;
 PFont Sen;
 
 void setup() {
   size(720, 720);
+  surface.setResizable(true);
   
   font = loadFont("Consolas-12.vlw");
   Sen = loadFont("Sen-36.vlw");
+  
+  theta1 = (float)Math.random() * 2 * PI;
+  theta2 = (float)Math.random() * 2 * PI;
 }
 
 void draw() {
   now = millis();
   deltaMillis = now - lastMillis;
   float deltaSec = deltaMillis / 1000.0;
+  //float deltaSec = 1 / frameRate;
   
   background(0);
   
-  fill(64);
-  textFont(Sen, 36);
-  textAlign(LEFT, BOTTOM);
-  text("Double Pendulum", 24, height - 24);
-  textFont(Sen, 18);
-  text("github.com/i-am-gizm0", 24, height - 60);
-  
   translate(width / 2, height / 2);  // Moves the origin to the center of the window
   scale(1, -1);  // Inverts the Y axis so it points up like we're used to. It hopefully will make math easier later
+  
+  int meter = floor(viewScale * Constants.lengthScaleFactor);
+  int rowsThatFit = height / meter;
+  int columnsThatFit = width / meter;
+  for (int x = -1 * columnsThatFit; x <= columnsThatFit; x++) {
+    stroke(16);
+    strokeWeight(1 * viewScale);
+    line(drawScale(x), height / 2, drawScale(x), -height / 2);
+    for (int y = -1 * rowsThatFit; y <= rowsThatFit; y++) {
+      stroke(16);
+      strokeWeight(1 * viewScale);
+      line(-width / 2, drawScale(y), width / 2, drawScale(y));
+      stroke(32);
+      strokeWeight(4 * viewScale);
+      point(drawScale(x), drawScale(y));
+    }
+  }
+  
   textLine = 1;
   textMaxLength = 0;
   textShift = 7;
@@ -101,6 +124,7 @@ void draw() {
     
     deltaTheta1 = omega1 * deltaSec;
     theta1 += deltaTheta1;
+    theta1 = theta1 % (2 * PI);
     
     // Calculate rotational kinematics of second pendulum
     
@@ -113,6 +137,7 @@ void draw() {
     
     deltaTheta2 = omega2 * deltaSec;
     theta2 += deltaTheta2;
+    theta2 = theta2 % (2 * PI);
     
     
     // Calculate linear kinematics of first pendulum
@@ -124,6 +149,8 @@ void draw() {
     vy1 = omega1 * l1 * sin(theta1);
     ay1 = pow(omega1, 2) * l1 * cos(theta1) + alpha1 * l1 * sin(theta1);
     
+    pos1.add(0, new Pair<Float>(x1, y1));
+    
     // Calculate linear kinematics of second pendulum
     x2 = x1 + l2 * sin(theta2);
     vx2 = vx1 + omega2 * l2 * cos(theta2);
@@ -132,10 +159,31 @@ void draw() {
     y2 = y1 - l2 * cos(theta2);
     vy2 = vy1 + omega2 * l2 * sin(theta2);
     ay2 = ay1 + pow(omega2, 2) * l2 * cos(theta2) + alpha2 * l2 * sin(theta2);
+    
+    pos2.add(0, new Pair<Float>(x2, y2));
   }
   
   // The hard part's over. Draw it.
-  strokeWeight(2);
+  
+  strokeWeight(1 * viewScale);
+  for (int i = 0; i < pos1.size() - 1; i++) {
+    stroke(255, 0, 0, 255 - i);
+    Pair a = (Pair)pos1.get(i);
+    Pair b = (Pair)pos1.get(i + 1);
+    line(drawScale((float)a.getA()), drawScale((float)a.getB()), drawScale((float)b.getA()), drawScale((float)b.getB()));
+    
+    stroke(0, 0, 255, 255 - i);
+    a = (Pair)pos2.get(i);
+    b = (Pair)pos2.get(i + 1);
+    line(drawScale((float)a.getA()), drawScale((float)a.getB()), drawScale((float)b.getA()), drawScale((float)b.getB()));
+  }
+  
+  if (pos1.size() > Constants.linger) {
+    pos1.remove(pos1.size() - 1);
+    pos2.remove(pos2.size() - 1);
+  }
+  
+  strokeWeight(2 * viewScale);
   // Draw the first pendulum
   stroke(255, 0, 0);
   line(0, 0, drawScale(x1), drawScale(y1));
@@ -145,20 +193,31 @@ void draw() {
   
   
   // Draw masses
-  strokeWeight(Constants.massScaleFactor / 2);
-  stroke(0, 255, 0);
+  strokeWeight(Constants.massScaleFactor * viewScale / 2);
+  stroke(16);
   point(0, 0);
   // Draw the first mass
-  strokeWeight(Constants.massScaleFactor * m1);
+  strokeWeight(Constants.massScaleFactor * m1 * viewScale);
   stroke(255, 0, 0);
   point(drawScale(x1), drawScale(y1));
   // Draw the second mass
-  strokeWeight(Constants.massScaleFactor * m2);
+  strokeWeight(Constants.massScaleFactor * m2 * viewScale);
   stroke(0, 0, 255);
   point(drawScale(x2), drawScale(y2));
   
   scale(1, -1);
   translate(-width / 2, -height / 2);
+  
+  fill(128, 128);
+  textFont(Sen, 36);
+  textAlign(LEFT, BOTTOM);
+  text("Double Pendulum", 24, height - 24);
+  textFont(Sen, 18);
+  text("github.com/i-am-gizm0", 24, height - 60);
+  
+  if (saveFrame) {
+    saveFrame("Pendulum####.png");
+  }
   
   textFont(font, 12);
   if (paused) {
@@ -178,10 +237,11 @@ void draw() {
   
   // Cleanup for the next frame
   lastMillis = now;
+  saveFrame = false;
 }
 
 private float drawScale(float n) {
-  return n * Constants.lengthScaleFactor;
+  return n * Constants.lengthScaleFactor * viewScale;
 }
 
 private void help() {
@@ -191,6 +251,9 @@ private void help() {
   textDraw("  ?    Help menu");
   textDraw("  d    Debug List");
   textDraw("space  Pause/Resume");
+  textDraw(" =/-   Zoom In/Out");
+  textDraw("  0    Reset Zoom");
+  textDraw("  p    Take Screenshot");
   nextColumn();
 }
 
@@ -204,14 +267,26 @@ private void debug() {
   fill(128, 255, 128);
   textDraw("W: " + width + "px");
   textDraw("H: " + height + "px");
-  textDraw("S: " + (Constants.viewScale * 100) + "%");
+  textDraw("S: " + (viewScale * 100) + "%");
   fill(0, 255, 0);
-  textDraw("Frame Rate: " + String.format("%1$-" + 9 + "s", frameRate) + "fps");
-  textDraw("Rendered Frames: " + frameCount + "frames");
+  textDraw("Frame Rate: " + padString(frameRate) + "fps");
+  frameRateSum += Math.round(frameRate);
+  float avgFrameRate = frameRateSum / frameCount;
+  textDraw("Avg. Frame Rate: " + avgFrameRate + "fps");
+  textDraw("Rendered Frames: " + frameCount + " frames");
   textDraw("Elapsed Time: " + now + "ms");
   textDraw("Last Time: " + lastMillis + "ms");
-  textDraw("Interframe Time: " + deltaMillis + "ms");
-  textDraw("Calculation Time: " + (millis() - now) + "ms");
+  textDraw("Interframe Time:  " + deltaMillis + "ms");
+  int calcTime = (millis() - now);
+  textDraw("Intraframe Time: " + calcTime + "ms");
+  textDraw("Frame Wait Time: " + (deltaMillis - calcTime) + "ms");
+  int estimatedFrames = (now / 1000) * 60;
+  int difference = estimatedFrames - frameCount;
+  if (difference > 0) {
+    textDraw("Lag: " + difference + " frames behind");
+  } else {
+    textDraw("Lag: " + (-1 * difference) + " frames ahead");
+  }
   nextColumn();
   
   fill(255, 128, 128);
@@ -219,19 +294,19 @@ private void debug() {
   textDraw("M₁  " + m1 + "kg");
   textDraw("                      ");
   fill(255, 0, 0);
-  textDraw("θ₁  " + theta1 + "rad");
-  textDraw("Δθ₁ " + deltaTheta1 + "rad");
-  textDraw("ω₁  " + omega1 + "rad/s");
-  textDraw("Δω₁ " + deltaOmega1 + "rad/s");
-  textDraw("α₁  " + alpha1 + "rad/s²");
+  textDraw("θ₁  " + padString(theta1, 13) + "rad");
+  textDraw("Δθ₁ " + padString(deltaTheta1, 13) + "rad");
+  textDraw("ω₁  " + padString(omega1, 13) + "rad/s");
+  textDraw("Δω₁ " + padString(deltaOmega1, 13) + "rad/s");
+  textDraw("α₁  " + padString(alpha1, 13) + "rad/s²");
   textDraw();
-  textDraw("x₁  " + x1 + "m");
-  textDraw("vx₁ " + vx1 + "m/s");
-  textDraw("ax₁ " + ax1 + "m/s²");
+  textDraw("x₁  " + padString(x1, 13) + "m");
+  textDraw("vx₁ " + padString(vx1, 13) + "m/s");
+  textDraw("ax₁ " + padString(ax1, 13) + "m/s²");
   textDraw();
-  textDraw("y₁  " + y1 + "m");
-  textDraw("vy₁ " + vy1 + "m/s");
-  textDraw("ay₁ " + ay1 + "m/s²");
+  textDraw("y₁  " + padString(y1, 13) + "m");
+  textDraw("vy₁ " + padString(vy1, 13) + "m/s");
+  textDraw("ay₁ " + padString(ay1, 13) + "m/s²");
   nextColumn();
   
   fill(128, 128, 255);
@@ -239,19 +314,19 @@ private void debug() {
   textDraw("M₂  " + m2 + "kg");
   textDraw();
   fill(64, 64, 255);
-  textDraw("θ₂  " + theta2 + "rad");
-  textDraw("Δθ₂ " + deltaTheta2 + "rad");
-  textDraw("ω₂  " + omega2 + "rad/s");
-  textDraw("Δω₂ " + deltaOmega2 + "rad/s");
-  textDraw("α₂  " + alpha2 + "rad/s²");
+  textDraw("θ₂  " + padString(theta2, 13) + "rad");
+  textDraw("Δθ₂ " + padString(deltaTheta2, 13) + "rad");
+  textDraw("ω₂  " + padString(omega2, 13) + "rad/s");
+  textDraw("Δω₂ " + padString(deltaOmega2, 13) + "rad/s");
+  textDraw("α₂  " + padString(alpha2, 13) + "rad/s²");
   textDraw();
-  textDraw("x₂  " + x2 + "m");
-  textDraw("vx₂ " + vx2 + "m/s");
-  textDraw("ax₂ " + ax2 + "m/s²");
+  textDraw("x₂  " + padString(x2, 13) + "m");
+  textDraw("vx₂ " + padString(vx2, 13) + "m/s");
+  textDraw("ax₂ " + padString(ax2, 13) + "m/s²");
   textDraw();
-  textDraw("y₂  " + y2 + "m");
-  textDraw("vy₂ " + vy2 + "m/s");
-  textDraw("ay₂ " + ay2 + "m/s²");
+  textDraw("y₂  " + padString(y2, 13) + "m");
+  textDraw("vy₂ " + padString(vy2, 13) + "m/s");
+  textDraw("ay₂ " + padString(ay2, 13) + "m/s²");
 }
 
 private void textDraw() {
@@ -274,6 +349,22 @@ private void nextColumn() {
   textMaxLength = 0;
 }
 
+private String padString(float number) {
+  return padString(number, 9);
+}
+
+private String padString(float number, int length) {
+  return padString("" + number, length);
+}
+
+private String padString(String string) {
+  return padString(string, 9);
+}
+
+private String padString(String string, int length) {
+  return String.format("%1$-" + length + "s", string);
+}
+
 void keyPressed() {
   if (key != CODED) {
     switch (key) {
@@ -288,6 +379,25 @@ void keyPressed() {
        
        case ' ':
          paused = !paused;
+         break;
+       
+       case '-':
+         if (viewScale != 0.25) {
+           viewScale -= 0.25;
+         }
+         break;
+       
+       case '+':
+       case '=':
+         viewScale += 0.25;
+         break;
+       
+       case '0':
+         viewScale = 1;
+         break;
+       
+       case 'p':
+         saveFrame = true;
          break;
     }
   } else {

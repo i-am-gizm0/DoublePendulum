@@ -4,6 +4,7 @@ public static class Constants {
   static final public float viewScale = 1;
   static final public float massScaleFactor = 20;
   static final public float lengthScaleFactor = 180;
+  static final public int linger = 255;
   
   static final public float mass1 = 1;
   static final public float length1 = 1;
