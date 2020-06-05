@@ -2,6 +2,8 @@
 // https://github.com/i-am-gizm0/DoublePendulum
 // Equations from https://www.myphysicslab.com/pendulum/double-pendulum-en.html
 
+import java.util.Date;
+
 // Physics Values
 float theta1 = 0;
 float deltaTheta1 = 0;
@@ -62,9 +64,14 @@ boolean help = false;
 boolean debug = true;
 boolean paused = false;
 boolean saveFrame = false;
+boolean record = true;
 
 PFont font;
 PFont Sen;
+
+Date d = new Date();
+PrintWriter csvOutput;
+String configName;
 
 void setup() {
   size(720, 720);
@@ -75,6 +82,8 @@ void setup() {
   
   theta1 = (float)Math.random() * 2 * PI;
   theta2 = (float)Math.random() * 2 * PI;
+  
+  startRecording();
 }
 
 void draw() {
@@ -121,6 +130,7 @@ void draw() {
     
     deltaOmega1 = alpha1 * deltaSec;
     omega1 += deltaOmega1;
+    //omega1 *= 0.99;
     
     deltaTheta1 = omega1 * deltaSec;
     theta1 += deltaTheta1;
@@ -134,6 +144,7 @@ void draw() {
     
     deltaOmega2 = alpha2 * deltaSec;
     omega2 += deltaOmega2;
+    //omega2 *= 0.99;
     
     deltaTheta2 = omega2 * deltaSec;
     theta2 += deltaTheta2;
@@ -224,6 +235,13 @@ void draw() {
     fill(255);
     textDraw("PAUSED");
     textDraw();
+    stopRecording();
+  }
+  
+  if (record) {
+    fill(255, 64, 64);
+    textDraw("RECORDING");
+    csvOutput.println(frameCount + "," + theta1 + "," + theta2);
   }
   
   if (help) {
@@ -254,6 +272,7 @@ private void help() {
   textDraw(" =/-   Zoom In/Out");
   textDraw("  0    Reset Zoom");
   textDraw("  p    Take Screenshot");
+  textDraw("  r    Toggle Recording");
   nextColumn();
 }
 
@@ -366,6 +385,7 @@ private String padString(String string, int length) {
 }
 
 void keyPressed() {
+  //println(keyCode);
   if (key != CODED) {
     switch (key) {
       case 'd':
@@ -399,9 +419,34 @@ void keyPressed() {
        case 'p':
          saveFrame = true;
          break;
+       
+       case 'r':
+         if (record) {
+           stopRecording();
+         } else {
+           startRecording();
+         }
     }
   } else {
     switch (keyCode) {
+      case 17: // Print
     }
+  }
+}
+
+private void startRecording() {
+  stopRecording();
+  Date d = new Date();
+  csvOutput = createWriter("Pendulum " + d.getTime() + ".csv");
+  csvOutput.println("Frame,Theta 1,Theta 2");
+  configName = "Pendulum " + d.getTime() + ".txt";
+  record = true;
+}
+
+private void stopRecording() {
+  record = false;
+  if (csvOutput != null) {
+    csvOutput.flush();
+    csvOutput.close();
   }
 }
