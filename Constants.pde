@@ -1,4 +1,5 @@
 public static class Constants {
+  static final public int frameRate = 60;
   static final public float g = 9.8;
   
   static final public float viewScale = 1;

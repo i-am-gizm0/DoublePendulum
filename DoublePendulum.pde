@@ -71,11 +71,11 @@ PFont Sen;
 
 Date d = new Date();
 PrintWriter csvOutput;
-String configName;
 
 void setup() {
   size(720, 720);
   surface.setResizable(true);
+  frameRate(Constants.frameRate);
   
   font = loadFont("Consolas-12.vlw");
   Sen = loadFont("Sen-36.vlw");
@@ -89,8 +89,8 @@ void setup() {
 void draw() {
   now = millis();
   deltaMillis = now - lastMillis;
-  float deltaSec = deltaMillis / 1000.0;
-  //float deltaSec = 1 / frameRate;
+  //float deltaSec = deltaMillis / 1000.0;
+  float deltaSec = 1 / frameRate;
   
   background(0);
   
@@ -241,7 +241,7 @@ void draw() {
   if (record) {
     fill(255, 64, 64);
     textDraw("RECORDING");
-    csvOutput.println(frameCount + "," + theta1 + "," + theta2);
+    csvOutput.println((now / 1000) + "," + theta1 + "," + theta2);
   }
   
   if (help) {
@@ -287,11 +287,15 @@ private void debug() {
   textDraw("W: " + width + "px");
   textDraw("H: " + height + "px");
   textDraw("S: " + (viewScale * 100) + "%");
-  fill(0, 255, 0);
+  int fpsWarn = Math.round((255 / Constants.frameRate) * frameRate);
+  fill(255 - fpsWarn, fpsWarn, 0);
   textDraw("Frame Rate: " + padString(frameRate) + "fps");
   frameRateSum += Math.round(frameRate);
-  float avgFrameRate = frameRateSum / frameCount;
-  textDraw("Avg. Frame Rate: " + avgFrameRate + "fps");
+  float avgFrameRate = (float)frameRateSum / frameCount;
+  int avgFpsWarn = Math.round((255 / Constants.frameRate) * avgFrameRate);
+  fill(255 - avgFpsWarn, avgFpsWarn, 0);
+  textDraw("Avg. Frame Rate: " + padString(avgFrameRate, 9) + "fps");
+  fill(0, 255, 0);
   textDraw("Rendered Frames: " + frameCount + " frames");
   textDraw("Elapsed Time: " + now + "ms");
   textDraw("Last Time: " + lastMillis + "ms");
@@ -438,8 +442,20 @@ private void startRecording() {
   stopRecording();
   Date d = new Date();
   csvOutput = createWriter("Pendulum " + d.getTime() + ".csv");
-  csvOutput.println("Frame,Theta 1,Theta 2");
-  configName = "Pendulum " + d.getTime() + ".txt";
+  csvOutput.println("Time (s),Theta 1 (rad),Theta 2 (rad)");
+  PrintWriter configOutput = createWriter("Pendulum " + d.getTime() + ".txt");
+  configOutput.println("gravity=" + g);
+  configOutput.println();
+  configOutput.println("l1=" + l1);
+  configOutput.println("m1=" + m1);
+  configOutput.println("theta1=" + theta1);
+  configOutput.println();
+  configOutput.println("l2=" + l2);
+  configOutput.println("m2=" + m2);
+  configOutput.println("theta2=" + theta2);
+  configOutput.flush();
+  configOutput.close();
+  String config = "";
   record = true;
 }
 
