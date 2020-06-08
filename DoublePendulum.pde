@@ -241,7 +241,7 @@ void draw() {
   if (record) {
     fill(255, 64, 64);
     textDraw("RECORDING");
-    csvOutput.println((now / 1000) + "," + theta1 + "," + theta2);
+    csvOutput.println((now / 1000.0) + "," + theta1 + "," + theta2);
   }
   
   if (help) {
